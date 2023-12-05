@@ -261,7 +261,7 @@ Version 2015-04-09"
   "Wrap word/region with char of choice."
   (interactive)
   (let (insq)
-  (setq insq (read-string "Wrapping Char? (\"):" nil nil "\""))
+  (setq insq (read-string "Wrapping Char? `)` :" nil nil ")"))
   (if (string-match insq "({})][")
     (progn
       (cond ((string= insq "{") (bb-wrap-at-region "{" "}"))
@@ -423,7 +423,7 @@ Version 2015-04-09"
 				      ))
      ((get-buffer "*ansi-term*") (progn (setq max-ansi-term 1) (switch-to-buffer "*ansi-term*")))
      ((equal max-ansi-term 0) (ansi-term "/usr/bin/fish")))))
-(global-set-key (kbd "C-`") 'bb-switch-create-ansi)
+(global-set-key (kbd "C-c a s") 'bb-switch-create-ansi)
 
 
 (defun bb-increment-number-at-point ()
@@ -468,10 +468,6 @@ Version 2015-04-09"
     (bb-decrement-number-at-point)))
 (global-set-key (kbd "C-c n d") 'bb-decrement-number-at-point-universal)
 
-(global-set-key (kbd "C-c p")
-  (lambda ()
-    (interactive)
-    (re-search-backward (format "\\b%s\\b" (thing-at-point 'word)))))
 
 ;; search for .. (dired mode)
 (global-set-key (kbd "C-.")
@@ -479,7 +475,12 @@ Version 2015-04-09"
     (interactive)
     (search-backward "..")))
 
-launch Term
+(defun bb-jump-paren-f () (interactive) (search-forward "()"))
+(defun bb-jump-paren-b () (interactive) (search-backward "()"))
+(global-set-key (kbd "C-c 0") 'bb-jump-paren-f)
+(global-set-key (kbd "C-c 9") 'bb-jump-paren-b)
+
+;; launch Term
 (global-set-key (kbd "s-<return>")
 (lambda ()
   (interactive)
@@ -498,6 +499,7 @@ launch Term
   (interactive)
   (ansi-term "/usr/bin/fish")))
 
+(setq playing 'false)
 
 (defun bb-global-play-Music()
   "Globally Play/Pause music."
