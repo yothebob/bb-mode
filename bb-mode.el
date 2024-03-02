@@ -30,7 +30,6 @@
 (require 'bongo)
 (require 'vterm)
 
-
 (defun bb-goto-paren ()
   "Using 'show-paren-mode', Find matching parenthese and jump to."
   (interactive)
@@ -43,10 +42,11 @@
       (goto-char (nth 2 (show-paren--default)))))
 (global-set-key (kbd "C-c j p") 'bb-goto-paren)
 
-(defun bb-dired-do-eshell-command (command)
+(defun bb-dired-do-eshell-command ()
   "Run an Eshell COMMAND on the marked files."
-  (interactive "eshell command: ")
-  (let ((files (dired-get-marked-files t)))
+  (interactive)
+  (let ((files (dired-get-marked-files t)) (command ""))
+    (setq command (read-string "command?: "))
     (eshell-command
      (format "%s %s" command (mapconcat #'identity files " ")))))
 ;; M-x dired-do-eshell-command RET grep -nH --color your-search--pattern RET
@@ -334,7 +334,7 @@ Version 2015-04-09"
     (setq picked-option 'kill-new)
   (with-current-buffer "*Messages*"
     (goto-char (point-max))
-    (line-move -2)
+    (line-move -1)
     (setq message-test (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
   (funcall picked-option message-test)))
 (global-set-key (kbd "C-c m p") 'bb-message-pop)
@@ -549,6 +549,25 @@ Version 2015-04-09"
 				       (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*"))))
      ((equal max-ansi-term 0) (ansi-term "/usr/bin/fish")))))
 (global-set-key (kbd "C-c a s") 'bb-switch-create-ansi) 
+
+
+(setq *current-vterm-buff* 0)
+
+(defun bb-switch-vterm ()
+  "Get a list of vterm buffers, cycle though them."
+  (interactive)
+  (let (vterm-buffers)
+    (setq vterm-buffers (sort (buffer-query "select where vterm in mode") #'string>))
+    (if (>= *current-vterm-buff* (length vterm-buffers))
+	(progn
+	  (switch-to-buffer (nth 0 vterm-buffers))
+	  (setq *current-vterm-buff* 1))
+      (progn
+	(switch-to-buffer (nth *current-vterm-buff* vterm-buffers))
+	(setq *current-vterm-buff* (+ *current-vterm-buff* 1))))))
+(global-set-key (kbd "C-c v s") 'bb-switch-vterm)
+
+
 
 (defun bb-increment-number-at-point ()
   "Increment number at point https://www.emacswiki.org/emacs/IncrementNumber."
