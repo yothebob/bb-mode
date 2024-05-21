@@ -30,6 +30,12 @@
 (require 'bongo)
 (require 'vterm)
 
+(defun bb-eval-elisp ()
+  (interactive)
+  (let (code)
+    (setq code (read-string "Code:" "(dotimes (i 10) (insert (format \"%s \" i)))"))
+    (eval (car (read-from-string code)))))
+
 (defun bb-goto-paren ()
   "Using 'show-paren-mode', Find matching parenthese and jump to."
   (interactive)
@@ -488,67 +494,53 @@ Version 2015-04-09"
     (backward-char 1)))
 (global-set-key (kbd "C-c f p") 'bb-replace-parenthese)
 
-(setq bb-ansi-last-saved-buffer "")
+(setq *current-vterm-buff* 0)
+(setq *before-vterm-switch-buffer* "")
+
+(defun bb-switch-vterm ()
+  "Get a list of vterm buffers, cycle though them."
+  (interactive)
+  (let (vterm-buffers)
+    (if (not (cl-search "term" (buffer-name)))
+	(progn
+	  (setq *before-vterm-switch-buffer* (buffer-name))
+	  (setq *current-vterm-buff* 0)))
+    (setq vterm-buffers (sort (buffer-query "select where vterm in mode" :nonroute t) #'string>))
+    (if (equal vterm-buffers nil) (vterm))
+    (if (>= *current-vterm-buff* (length vterm-buffers))
+	(progn
+	  (switch-to-buffer *before-vterm-switch-buffer*)
+	  (setq *current-vterm-buff* 0))
+      (progn
+	(switch-to-buffer (nth *current-vterm-buff* vterm-buffers))
+	(setq *current-vterm-buff* (+ *current-vterm-buff* 1))))))
+(global-set-key (kbd "C-c v s") 'bb-switch-vterm)
+
+
+(setq *current-ansiterm-buff* 0)
+(setq *before-ansiterm-switch-buffer* "")
 
 (defun bb-switch-create-ansi ()
   "This is a function for switching between ansi-term buffers, if none exist create one."
   (interactive)
-  (if (not (cl-search "ansi-term" (buffer-name)))
-      (setq bb-ansi-last-saved-buffer (buffer-name)))
-  
-  (let (max-ansi-term current-ansi-term)
-    (if (cl-search "ansi-term" (buffer-name))
-	(cond
-	 ((cl-search "<5>" (buffer-name)) (setq current-ansi-term 5))
-	 ((cl-search "<4>" (buffer-name)) (setq current-ansi-term 4))
-	 ((cl-search "<3>" (buffer-name)) (setq current-ansi-term 3))
-	 ((cl-search "<2>" (buffer-name)) (setq current-ansi-term 2))
-	 ((equal "*ansi-term*" (buffer-name)) (setq current-ansi-term 1))
-	 )
-      (setq current-ansi-term 0))
-    
-    (setq max-ansi-term 0)
-    (cond
-     ((get-buffer "*ansi-term*<5>") (progn
-				      (setq max-ansi-term 5)
-				      (if (< current-ansi-term max-ansi-term)
-					  (if (equal current-ansi-term 0)
-					      (if (get-buffer "*ansi-term*") (switch-to-buffer "*ansi-term*") (ansi-term "/usr/bin/fish"))
-					    (switch-to-buffer (format "*ansi-term*<%s>" (+ current-ansi-term 1))))
-					(if (not (string= bb-ansi-last-saved-buffer "")) (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*"))
-					)
-				      ))
-     ((get-buffer "*ansi-term*<4>") (progn
-				      (setq max-ansi-term 4)
-				      (if (< current-ansi-term max-ansi-term)
-					  (if (equal current-ansi-term 0)
-					      (if (get-buffer "*ansi-term*") (switch-to-buffer "*ansi-term*") (ansi-term "/usr/bin/fish"))
-					    (switch-to-buffer (format "*ansi-term*<%s>" (+ current-ansi-term 1))))
-					(if (not (string= bb-ansi-last-saved-buffer "")) (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*")))
-				      ))
-     ((get-buffer "*ansi-term*<3>") (progn
-				      (setq max-ansi-term 3)
-				      (if (< current-ansi-term max-ansi-term)
-					  (if (equal current-ansi-term 0)
-					      (if (get-buffer "*ansi-term*") (switch-to-buffer "*ansi-term*") (ansi-term "/usr/bin/fish"))
-					    (switch-to-buffer (format "*ansi-term*<%s>" (+ current-ansi-term 1))))
-					(if (not (string= bb-ansi-last-saved-buffer "")) (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*")))
-				      ))
-     ((get-buffer "*ansi-term*<2>") (progn
-				      (setq max-ansi-term 2)
-				      (if (< current-ansi-term max-ansi-term) 
-					  (if (equal current-ansi-term 0)
-					      (if (get-buffer "*ansi-term*") (switch-to-buffer "*ansi-term*") (ansi-term "/usr/bin/fish"))
-					    (switch-to-buffer "*ansi-term*<2>"))
-					(if (not (string= bb-ansi-last-saved-buffer "")) (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*")))
-				      ))
-     ((get-buffer "*ansi-term*") (progn
-				   (setq max-ansi-term 1)
-				   (if
-				       (and (string= (buffer-name) "*ansi-term*") (not (string= bb-ansi-last-saved-buffer "")))
-				       (switch-to-buffer bb-ansi-last-saved-buffer) (switch-to-buffer "*ansi-term*"))))
-     ((equal max-ansi-term 0) (ansi-term "/usr/bin/fish")))))
-(global-set-key (kbd "C-c a s") 'bb-switch-create-ansi) 
+  (let (ansiterm-buffers)
+    (if (not (cl-search "ansi-term" (buffer-name)))
+	(progn
+	  (setq *before-ansiterm-switch-buffer* (buffer-name))
+	  (setq *current-ansiterm-buff* 0)))
+    (setq ansiterm-buffers (sort (buffer-query "select name from buffers where ansi-term in name" :nonroute t) #'string>))
+    (if (equal ansiterm-buffers nil) (ansi-term "/bin/fish"))
+    (if (>= *current-ansiterm-buff* (length ansiterm-buffers))
+	(progn
+	  (switch-to-buffer *before-ansiterm-switch-buffer*)
+	  (setq *current-ansiterm-buff* 0))
+      (progn
+	(switch-to-buffer (nth *current-ansiterm-buff* ansiterm-buffers))
+	(setq *current-ansiterm-buff* (+ *current-ansiterm-buff* 1))))))
+(global-set-key (kbd "C-c a s") 'bb-switch-create-ansi)
+
+;; TODO: it would be nice to just write a cycler func that takes some arguments and I can use it for all sorts of buffers
+
 
 
 (setq *current-vterm-buff* 0)
@@ -639,7 +631,7 @@ Version 2015-04-09"
 (global-set-key (kbd "C-c p t") 'bb-create-print-statement)
 
 ;; search for .. (dired mode)
-(global-set-key (kbd "C-.")
+(global-set-key (kbd "C-c .")
   (lambda ()
     (interactive)
     (search-backward "..")))
@@ -653,7 +645,7 @@ Version 2015-04-09"
 (defun bb-make-named-vterm ()
   "A function for making a custom named Vterm instance."
   (interactive)
-  (vterm (read-string "Terminal Name:")))
+  (vterm (read-string "Terminal Name:" "*vterm*")))
 (global-set-key (kbd "C-c v t") 'bb-make-named-vterm)
 
 ;; launch ansi term
@@ -697,34 +689,6 @@ Version 2015-04-09"
 	  ((string= picked "g") (global-set-key (kbd "C-x p") 'bb-global-play-Music))
 	  ((string= picked "s") (bb-use-sht-music)))))
 
-(defun bb-use-eaf (&optional pre-picked)
-  "A function for turning off/on emacs application framework (browser, terminal etc).
-  If off you eww is used, otherwise that keybinding is replaced with eaf-browser."
-  (interactive)
-  (let ((choices '("y" "n")) picked)
-    (if pre-picked
-	(setq picked pre-picked)
-    (setq picked (completing-read "enable EAF? (y/n):" choices)))
-    (cond
-     ((string= picked "y")
-      (progn
-	(use-package eaf
-	  :load-path "~/.emacs.d/site-lisp/emacs-application-framework"
-	  :custom
-	  (eaf-browser-continue-where-left-off t)
-	  (eaf-browser-enable-adblocker t)
-	  (browse-url-browser-function 'eaf-open-browser)
-	  :config
-	  (defalias 'browse-web #'eaf-open-browser))
-	(require 'eaf-vue-demo)
-	(require 'eaf-terminal)
-	(require 'eaf)
-	(require 'eaf-browser)
-	(global-set-key (kbd "C-c e w ") 'eaf-open-browser)
-	(global-set-key (kbd "M-s-<return>") 'eaf-open-terminal)))
-     ((string= picked "n") (global-set-key (kbd "C-c e w ") 'eww))
-     )))
-
 (defun bb-make-todo ()
     "Comments or uncomments the region or the current line if there's no active region."
     (interactive)
@@ -744,7 +708,7 @@ Version 2015-04-09"
 	(setq arg 10))
   (dotimes (_ arg)
     (setq res (concat res (string (nth (random (length (string-to-list charset)))(string-to-list charset))))))
-  (kill-new res)))
+  (insert res)))
 
 (defun bb-transparent ()
   "Make emacs window transparent."
@@ -758,6 +722,24 @@ Version 2015-04-09"
   (kill-new (replace-regexp-in-string "\n" "" (shell-command-to-string "git branch --show-current"))))
 (global-set-key (kbd "C-c g b") 'bb-current-git-branch)
 
+(defun org-scratch ()
+  "A small helper function to switch/create an org-buffer."
+  (interactive)
+  (if (string= (buffer-name (current-buffer)) "*scratch*")
+      (cond
+       ((string= (buffer-local-value 'major-mode (get-buffer (current-buffer))) "lisp-interaction-mode")
+	(with-current-buffer "*scratch*"
+	  (org-mode)))
+       ((string= (buffer-local-value 'major-mode (get-buffer (current-buffer))) "org-mode")
+	(with-current-buffer "*scratch*"
+	  (lisp-interaction-mode)))))
+  (if (get-buffer "*scratch*")
+      (switch-to-buffer "*scratch*")
+    (progn
+      (generate-new-buffer "*scratch*")
+      (with-current-buffer "*scratch*"
+	(lisp-interaction-mode)))))
+(global-set-key (kbd "C-c o s") 'org-scratch)
 
 (provide 'bb-mode)
 ;;; bb-mode.el ends here
